@@ -1,6 +1,6 @@
 # Bulk-URL-Checker
 
-Checks a given bulk of URL from a csv file for:
+Checks a given bulk of URLs from a csv file for:
 
 - Status code
 - Redirect target
@@ -8,7 +8,7 @@ Checks a given bulk of URL from a csv file for:
 - Some Metadata in the HTML head (language, title, canonical URL)
 - Search for PHP include error messages
 
-This way, you can do refactorings on your website and be sure, that nothing critical broke.
+This way, you can do refactorings on your website and be sure that nothing critical broke.
 
 ## Usage
 
