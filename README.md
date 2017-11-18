@@ -22,6 +22,8 @@ http://www.domain.de/path/,301,https://www.domain.de/path/
 https://www.domain.de/path/?queryparam,200
 ```
 
+See [`Makefile`](Makefile) for usage or:
+
 ```bash
 # live:
 ./bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="https://validator.w3.org/nu/"
@@ -41,7 +43,7 @@ See [here](https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-us
 ```bash
 sudo add-apt-repository ppa:jonathonf/python-3.6
 sudo apt-get update
-sudo apt-get install python3.6 python3.6-dev
+sudo apt-get install python3.6 python3.6-dev python3.6-venv
 
 # many ubuntu components (like gnome-terminal) are relying on python 3.5.
 # So you can't change the symlink python3 to point to 3.6
