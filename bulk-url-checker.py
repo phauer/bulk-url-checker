@@ -134,7 +134,7 @@ def partition(list, chunk_size):
     return [list[round(division * i):round(division * (i + 1))] for i in range(chunk_size)]
 
 
-def flatmap(list: List[str]):
+def flatmap(list: List[List[str]]):
     return [item for sublist in list for item in sublist]
 
 
