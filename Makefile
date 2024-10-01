@@ -20,7 +20,7 @@ check-live-live: $(VENV)
 
 $(VENV):
 	sudo apt install python3.6-venv
-	python3.6 -m venv $(VENV)
+	python3 -m venv $(VENV)
 	$(ACTIVATE);\
 	pip3 install --requirement requirements.txt
 
