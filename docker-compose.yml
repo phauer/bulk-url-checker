@@ -4,4 +4,3 @@ services:
     build: ./nu-validator
     ports:
       - "8888:8888"
-    network_mode: "host" #so "localhost" refers to the host machine.
