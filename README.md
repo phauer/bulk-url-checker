@@ -36,22 +36,12 @@ docker-compose up # start the nu-validator locally
 ./bulk-url-checker.py --csv_file="urls-localhost.csv" --nu_validator_url="http://localhost:8888/"
 ```
 
-## Install Python 3.6 and Deps
+## Install Dependencies
 
-See [here](https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get). For Ubuntu 16.04:
+Requires Python 3. `make check` (and the other targets) create a virtual environment in `.venv` and install `requirements.txt` automatically. To do that step manually:
 
 ```bash
-sudo add-apt-repository ppa:jonathonf/python-3.6
-sudo apt-get update
-sudo apt-get install python3.6 python3.6-dev python3.6-venv
-
-# many ubuntu components (like gnome-terminal) are relying on python 3.5.
-# So you can't change the symlink python3 to point to 3.6
-# sudo rm /usr/bin/python3
-# sudo ln -s /usr/bin/python3.6 /usr/bin/python3
-
-# re-install requirements with pip
-sudo pip3 install -r requirements.txt
+make venv
 ```
 
 ## Misc

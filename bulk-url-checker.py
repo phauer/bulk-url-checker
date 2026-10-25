@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3
 import csv
 import time
 from multiprocessing.pool import ThreadPool

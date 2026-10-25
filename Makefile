@@ -1,28 +1,27 @@
-.PHONY: check check-live, check-live-live
+.PHONY: all check check-live check-live-live venv clean
 
-SHELL:=/bin/bash
 VENV:=.venv
-ACTIVATE=source $(VENV)/bin/activate
+PYTHON:=$(VENV)/bin/python
+STAMP:=$(VENV)/.installed
 
 all: check
 
-check: $(VENV)
-	$(ACTIVATE);\
-	python3 bulk-url-checker.py --csv_file="urls-localhost.csv" --nu_validator_url="http://localhost:8888/"
+check: venv
+	$(PYTHON) bulk-url-checker.py --csv_file="urls-localhost.csv" --nu_validator_url="http://localhost:8888/"
 
-check-live: $(VENV)
-	$(ACTIVATE);\
-	python3 bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="http://localhost:8888/"
+check-live: venv
+	$(PYTHON) bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="http://localhost:8888/"
 
-check-live-live: $(VENV)
-	$(ACTIVATE);\
-	python3 bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="https://validator.w3.org/nu/"
+check-live-live: venv
+	$(PYTHON) bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="https://validator.w3.org/nu/"
 
-$(VENV):
-	sudo apt install python3.6-venv
+# creates the venv and (re-)installs the dependencies whenever requirements.txt changes
+venv: $(STAMP)
+
+$(STAMP): requirements.txt
 	python3 -m venv $(VENV)
-	$(ACTIVATE);\
-	pip3 install --requirement requirements.txt
+	$(VENV)/bin/pip install --requirement requirements.txt
+	touch $@
 
 clean:
-	rm -r ./$(VENV)
+	rm -rf ./$(VENV)
