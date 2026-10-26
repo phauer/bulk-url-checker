@@ -1,4 +1,0 @@
-urllib3>=2.2
-requests>=2.32
-beautifulsoup4>=4.12
-click>=8.1

@@ -29,7 +29,7 @@ See [`Makefile`](Makefile) for usage or:
 ./bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="https://validator.w3.org/nu/"
 
 # live URLs but local nu-validator
-docker-compose up # start the nu-validator locally
+docker compose up # start the nu-validator locally
 ./bulk-url-checker.py --csv_file="urls-live.csv" --nu_validator_url="http://localhost:8888/"
 
 # on localhost (assuming that you have a local nu-validator up and running):
@@ -38,10 +38,12 @@ docker-compose up # start the nu-validator locally
 
 ## Install Dependencies
 
-Requires Python 3. `make check` (and the other targets) create a virtual environment in `.venv` and install `requirements.txt` automatically. To do that step manually:
+Requires [uv](https://docs.astral.sh/uv/). The dependencies are declared inline in `bulk-url-checker.py` (PEP 723 script metadata) and pinned in `bulk-url-checker.py.lock`. uv installs them automatically on the first run, so there is no virtual environment to set up. Both `./bulk-url-checker.py` and `uv run bulk-url-checker.py` work.
+
+To update the pinned versions:
 
 ```bash
-make venv
+uv lock --script bulk-url-checker.py --upgrade
 ```
 
 ## Misc

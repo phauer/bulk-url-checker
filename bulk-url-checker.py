@@ -1,4 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#   "urllib3>=2.2",
+#   "requests>=2.32",
+#   "beautifulsoup4>=4.12",
+#   "click>=8.1",
+# ]
+# ///
 import csv
 import time
 from multiprocessing.pool import ThreadPool
