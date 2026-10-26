@@ -4,3 +4,5 @@ idea/
 *.csv
 
 .venv/
+.pytest_cache/
+__pycache__/

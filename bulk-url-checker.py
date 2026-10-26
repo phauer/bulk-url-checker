@@ -20,6 +20,8 @@ from bs4 import BeautifulSoup
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+REQUEST_TIMEOUT_SECONDS = 30
+
 
 class UrlConfig(NamedTuple):
     full_url: str
@@ -76,10 +78,13 @@ def check_url(url_config: UrlConfig, nu_validator_url: str) -> List[str]:
     expected_redirect_target = url_config.expected_redirect_target
     print(f"Checking {url_config}...")
     is_local_url = "localhost" in url
-    response = requests.get(url, allow_redirects=False, verify=(not is_local_url))
+    try:
+        response = requests.get(url, allow_redirects=False, verify=(not is_local_url), timeout=REQUEST_TIMEOUT_SECONDS)
+    except requests.RequestException as e:
+        return [f"URL {url} couldn't be requested: {e}"]
     if response.status_code == expected_status_code:
         if expected_redirect_target:
-            location = response.headers['Location']
+            location = response.headers.get('Location')
             if location == expected_redirect_target:
                 return []
             else:
@@ -99,8 +104,11 @@ def check_url(url_config: UrlConfig, nu_validator_url: str) -> List[str]:
 
 
 def validate_html(url: str, nu_validator_url: str) -> List[str]:
-    response = requests.get(url=nu_validator_url, params={'doc': url, 'out': 'json'})
-    messages = response.json()['messages']
+    try:
+        response = requests.get(url=nu_validator_url, params={'doc': url, 'out': 'json'}, timeout=REQUEST_TIMEOUT_SECONDS)
+        messages = response.json()['messages']
+    except (requests.RequestException, ValueError, KeyError) as e:
+        return [f"URL {url} couldn't be validated by {nu_validator_url}: {e}"]
     if len(messages) != 0:
         return [f"URL {url} has {len(messages)} validation errors. See {response.url.replace('out=json', 'out=html')}"]
     return []
@@ -119,21 +127,21 @@ def check_include_error(html_string: str, url: str) -> List[str]:
 
 
 def check_canonical_link(soup: BeautifulSoup, request_url) -> List[str]:
-    canonical_link = soup.head.find('link', {'rel': 'canonical'})
-    if not canonical_link:
+    canonical_link = soup.head.find('link', {'rel': 'canonical'}) if soup.head else None
+    canonical_href = canonical_link.attrs.get('href') if canonical_link else None
+    if not canonical_href:
         return [f"URL {request_url} doesn't contain canonical link."]
     request_url_without_query_params = request_url[:request_url.index('?')] if '?' in request_url else request_url
-    canonical_href = canonical_link.attrs['href']
-    if canonical_href.endswith('/') and not request_url_without_query_params.endswith('/'): # "www.localhost/" vs "www.localhost"
+    if canonical_href == request_url_without_query_params + '/':  # "www.localhost/" vs "www.localhost"
         return []
-    if canonical_link.attrs['href'] != request_url_without_query_params:
-        return [f"URL {request_url} contains a canonical url with a query parameter!"]
+    if canonical_href != request_url_without_query_params:
+        return [f"URL {request_url} has canonical URL {canonical_href} instead of {request_url_without_query_params}"]
     return []
 
 
 def check_lang_definition(soup: BeautifulSoup, url: str):
     html_tag = soup.find('html')
-    if 'lang' not in html_tag.attrs or 'de' != html_tag.attrs['lang']:
+    if html_tag is None or html_tag.attrs.get('lang') != 'de':
         return [f"URL {url} doesn't contain language 'de' in html tag."]
     return []
 

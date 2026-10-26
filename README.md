@@ -46,6 +46,14 @@ To update the pinned versions:
 uv lock --script bulk-url-checker.py --upgrade
 ```
 
+## Tests
+
+The tests live in `tests/` and mock all HTTP calls, so they need neither network access nor a running Nu-Validator:
+
+```bash
+make test
+```
+
 ## Misc
 
 I received a list of the used URLs of my web site from Google Analytics. It provides an csv-export functionality. To remove all data from the csv except the URLs use the following command:
