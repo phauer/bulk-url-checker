@@ -2,10 +2,10 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "urllib3>=2.2",
-#   "requests>=2.32",
-#   "beautifulsoup4>=4.12",
-#   "click>=8.1",
+#   "urllib3>=2.8",
+#   "requests>=2.34",
+#   "beautifulsoup4>=4.15",
+#   "click>=8.5",
 # ]
 # ///
 import csv

@@ -8,10 +8,10 @@ resolution-markers = [
 
 [manifest]
 requirements = [
-    { name = "beautifulsoup4", specifier = ">=4.12" },
-    { name = "click", specifier = ">=8.1" },
-    { name = "requests", specifier = ">=2.32" },
-    { name = "urllib3", specifier = ">=2.2" },
+    { name = "beautifulsoup4", specifier = ">=4.15" },
+    { name = "click", specifier = ">=8.5" },
+    { name = "requests", specifier = ">=2.34" },
+    { name = "urllib3", specifier = ">=2.8" },
 ]
 
 [[package]]
