@@ -386,7 +386,7 @@ class TestCli:
 
         result = CliRunner().invoke(checker.check, ["--csv_file", csv_file, "--thread_amount", "2"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "==== !! 5 ERROR(S) OCCURRED !! =====" in result.output
         for url in urls:
             assert f"URL {url} doesn't respond with 200. Instead: 500" in result.output
@@ -400,9 +400,21 @@ class TestCli:
 
         result = CliRunner().invoke(checker.check, ["--csv_file", csv_file])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "==== !! 1 ERROR(S) OCCURRED !! =====" in result.output
         assert f"URL {broken_url} couldn't be requested: connection refused" in result.output
+
+    @responses.activate
+    def test_validation_errors_alone_fail_the_run(self, checker, tmp_path):
+        responses.get(URL, body=html_page())
+        responses.get(VALIDATOR_URL, json={"messages": [{"type": "error"}]})
+        csv_file = write_csv(tmp_path, f"{self.CSV_HEADER}{URL},200\n")
+
+        result = CliRunner().invoke(checker.check, ["--csv_file", csv_file, "--nu_validator_url", VALIDATOR_URL])
+
+        assert result.exit_code == 1
+        assert "==== !! 1 ERROR(S) OCCURRED !! =====" in result.output
+        assert f"URL {URL} has 1 validation errors." in result.output
 
     def test_csv_file_is_required(self, checker):
         result = CliRunner().invoke(checker.check, [])

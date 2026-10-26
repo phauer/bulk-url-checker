@@ -49,6 +49,7 @@ def check(csv_file: str, nu_validator_url: str, thread_amount: int):
         click.echo(f"==== !! {len(errors)} ERROR(S) OCCURRED !! ===== ")
         for error in errors:
             click.echo(error)
+        raise SystemExit(1)  # non-zero exit code lets CI jobs fail
     else:
         click.echo("Everything went fine!")
 
