@@ -21,6 +21,9 @@ from bs4 import BeautifulSoup
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 REQUEST_TIMEOUT_SECONDS = 30
+# retries smooth over flaky networks (e.g. on CI runners), so a single slow response doesn't fail the whole run
+REQUEST_RETRIES = 2
+RETRY_DELAY_SECONDS = 5
 
 
 class UrlConfig(NamedTuple):
@@ -81,7 +84,7 @@ def check_url(url_config: UrlConfig, nu_validator_url: str, expected_lang: str =
     print(f"Checking {url_config}...")
     is_local_url = "localhost" in url
     try:
-        response = requests.get(url, allow_redirects=False, verify=(not is_local_url), timeout=REQUEST_TIMEOUT_SECONDS)
+        response = get_with_retries(url, allow_redirects=False, verify=(not is_local_url), timeout=REQUEST_TIMEOUT_SECONDS)
     except requests.RequestException as e:
         return [f"URL {url} couldn't be requested: {e}"]
     if response.status_code == expected_status_code:
@@ -105,9 +108,20 @@ def check_url(url_config: UrlConfig, nu_validator_url: str, expected_lang: str =
         return [f"URL {url} doesn't respond with {expected_status_code}. Instead: {response.status_code}"]
 
 
+def get_with_retries(url: str, **kwargs) -> requests.Response:
+    """GET request that is retried on timeouts and connection errors. HTTP error status codes are returned as they are."""
+    for attempt in range(1, REQUEST_RETRIES + 1):
+        try:
+            return requests.get(url, **kwargs)
+        except (requests.Timeout, requests.ConnectionError) as e:
+            print(f"Retry {attempt}/{REQUEST_RETRIES} for {url} after: {e}")
+            time.sleep(RETRY_DELAY_SECONDS * attempt)
+    return requests.get(url, **kwargs)
+
+
 def validate_html(url: str, nu_validator_url: str) -> List[str]:
     try:
-        response = requests.get(url=nu_validator_url, params={'doc': url, 'out': 'json'}, timeout=REQUEST_TIMEOUT_SECONDS)
+        response = get_with_retries(nu_validator_url, params={'doc': url, 'out': 'json'}, timeout=REQUEST_TIMEOUT_SECONDS)
         messages = response.json()['messages']
     except (requests.RequestException, ValueError, KeyError) as e:
         return [f"URL {url} couldn't be validated by {nu_validator_url}: {e}"]

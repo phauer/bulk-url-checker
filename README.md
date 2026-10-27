@@ -38,6 +38,8 @@ docker compose up # start the nu-validator locally
 
 The language check expects `<html lang="de">` by default. For other sites, pass the exact expected value, e.g. `--lang=en-US` or `--lang=de-DE`.
 
+Timeouts and connection errors are retried twice (after 5 and 10 seconds) before a URL is reported as unreachable. HTTP error status codes are not retried.
+
 The script exits with code 0 if all checks pass and with code 1 if any error was found, so CI jobs fail on regressions.
 
 ## Scheduled Checks

@@ -16,4 +16,6 @@ def _load_script_module():
 
 @pytest.fixture(scope="session")
 def checker():
-    return _load_script_module()
+    module = _load_script_module()
+    module.RETRY_DELAY_SECONDS = 0  # retries must not slow down the tests
+    return module

@@ -233,7 +233,7 @@ class TestValidateHtml:
     def test_validator_request_has_a_timeout(self, checker, monkeypatch):
         captured = {}
 
-        def fake_get(**kwargs):
+        def fake_get(requested_url, **kwargs):
             captured.update(kwargs)
             raise requests.Timeout("read timed out")
 
@@ -243,6 +243,14 @@ class TestValidateHtml:
 
         assert captured["timeout"] == checker.REQUEST_TIMEOUT_SECONDS
         assert errors == [f"URL {URL} couldn't be validated by {VALIDATOR_URL}: read timed out"]
+
+    @responses.activate
+    def test_validator_connection_error_is_retried(self, checker):
+        responses.get(VALIDATOR_URL, body=requests.ConnectionError("refused"))
+        responses.get(VALIDATOR_URL, json={"messages": []})
+
+        assert checker.validate_html(URL, VALIDATOR_URL) == []
+        assert len(responses.calls) == 2
 
     @responses.activate
     def test_non_json_validator_response_is_an_error(self, checker):
@@ -372,6 +380,66 @@ class TestCheckUrl:
         errors = checker.check_url(checker.UrlConfig(URL, 200, None), None)
 
         assert errors == [f"URL {URL} couldn't be requested: read timed out"]
+
+
+
+class TestGetWithRetries:
+    @responses.activate
+    @pytest.mark.parametrize("error", [requests.ReadTimeout("read timed out"), requests.ConnectionError("refused")])
+    def test_transient_error_is_retried(self, checker, error):
+        responses.get(URL, body=error)
+        responses.get(URL, body=html_page())
+
+        assert checker.check_url(checker.UrlConfig(URL, 200, None), None) == []
+        assert len(responses.calls) == 2
+
+    @responses.activate
+    def test_gives_up_after_all_retries(self, checker):
+        responses.get(URL, body=requests.ReadTimeout("read timed out"))
+
+        errors = checker.check_url(checker.UrlConfig(URL, 200, None), None)
+
+        assert errors == [f"URL {URL} couldn't be requested: read timed out"]
+        assert len(responses.calls) == 1 + checker.REQUEST_RETRIES
+
+    @responses.activate
+    def test_other_request_errors_are_not_retried(self, checker):
+        responses.get(URL, body=requests.exceptions.InvalidHeader("bad header"))
+
+        errors = checker.check_url(checker.UrlConfig(URL, 200, None), None)
+
+        assert errors == [f"URL {URL} couldn't be requested: bad header"]
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def test_http_error_status_is_not_retried(self, checker):
+        responses.get(URL, status=503)
+
+        errors = checker.check_url(checker.UrlConfig(URL, 200, None), None)
+
+        assert errors == [f"URL {URL} doesn't respond with 200. Instead: 503"]
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def test_waits_longer_before_each_retry(self, checker, monkeypatch):
+        sleeps = []
+        monkeypatch.setattr(checker, "RETRY_DELAY_SECONDS", 5)
+        monkeypatch.setattr(checker.time, "sleep", sleeps.append)
+        responses.get(URL, body=requests.ReadTimeout("read timed out"))
+
+        with pytest.raises(requests.ReadTimeout):
+            checker.get_with_retries(URL)
+
+        assert sleeps == [5, 10]
+
+    @responses.activate
+    def test_passes_request_arguments_through(self, checker):
+        call = responses.get(URL, body="ok")
+
+        response = checker.get_with_retries(URL, params={"a": "b"}, timeout=3)
+
+        assert response.text == "ok"
+        assert call.calls[0].request.params == {"a": "b"}
 
 
 class TestCli:
