@@ -36,11 +36,13 @@ docker compose up # start the nu-validator locally
 ./bulk-url-checker.py --csv_file="urls-localhost.csv" --nu_validator_url="http://localhost:8888/"
 ```
 
+The language check expects `<html lang="de">` by default. For other sites, pass the exact expected value, e.g. `--lang=en-US` or `--lang=de-DE`.
+
 The script exits with code 0 if all checks pass and with code 1 if any error was found, so CI jobs fail on regressions.
 
 ## Scheduled Checks
 
-To detect regressions on live sites early, run the checker on a schedule with GitHub Actions. The URL list doesn't have to be public: keep the CSV and the workflow in a separate private repo, and check out this repo inside the job. The official `ghcr.io/validator/validator` image runs the Nu-Validator as a service container:
+To detect regressions on live sites early, run the checker on a schedule with GitHub Actions. The URL lists don't have to be public: keep the CSVs and the workflow in a separate private repo, and check out this repo inside the job. A matrix gives each site its own job:
 
 ```yaml
 name: Check URLs
@@ -51,10 +53,15 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    services:
-      validator:
-        image: ghcr.io/validator/validator:latest
-        ports: ["8888:8888"]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - site: www.domain.de
+            lang: de
+          - site: www.domain.com
+            lang: en-US
+    name: ${{ matrix.site }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/checkout@v7
@@ -63,10 +70,10 @@ jobs:
           ref: master
           path: checker
       - uses: astral-sh/setup-uv@v7
-      - name: Wait for validator
-        run: timeout 60 bash -c 'until curl -sf http://localhost:8888/ >/dev/null; do sleep 2; done'
-      - run: uv run checker/bulk-url-checker.py --csv_file=urls-live.csv --nu_validator_url=http://localhost:8888/
+      - run: uv run checker/bulk-url-checker.py --csv_file=sites/${{ matrix.site }}.csv --lang=${{ matrix.lang }}
 ```
+
+To validate the HTML as well, add the official Nu-Validator image as a service container (`services: validator: image: ghcr.io/validator/validator:latest, ports: ["8888:8888"]`) and pass `--nu_validator_url=http://localhost:8888/`. Note that every validator message counts as an error, including info and warnings.
 
 GitHub emails you when a scheduled run fails.
 

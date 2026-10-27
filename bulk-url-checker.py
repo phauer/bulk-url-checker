@@ -33,14 +33,15 @@ class UrlConfig(NamedTuple):
 @click.option('--csv_file', required=True, help='The csv file containing the urls to check')
 @click.option('--nu_validator_url', default=None, help='If provided, each page will be validated using the given validator url. Defaults to None (no validation). Example values: "https://validator.w3.org/nu/" or "http://localhost:8888/"')
 @click.option('--thread_amount', type=click.INT, default=10, help='How many process are started to execute the check in parallel.')
-def check(csv_file: str, nu_validator_url: str, thread_amount: int):
+@click.option('--lang', default='de', show_default=True, help='Expected value of the lang attribute of the html tag (exact match). Example values: "de", "de-DE", "en-US"')
+def check(csv_file: str, nu_validator_url: str, thread_amount: int, lang: str):
     """Checks a given amount of URLs (e.g. status codes, redirects, title, valid HTML etc.)"""
     start_time = time.time()
     url_configs = read_url_configs(csv_file)
     url_config_chunks = partition(url_configs, thread_amount)
 
     pool = ThreadPool(processes=thread_amount)
-    async_results = [pool.apply_async(func=check_urls, args=[chunk, nu_validator_url]) for chunk in url_config_chunks]
+    async_results = [pool.apply_async(func=check_urls, args=[chunk, nu_validator_url, lang]) for chunk in url_config_chunks]
     all_results = [result.get() for result in async_results]
     errors = flatmap(all_results)
     print(f"--- {time.time() - start_time} seconds ---")
@@ -66,14 +67,14 @@ def map_to_url_config(row):
                      expected_redirect_target=row["expected_redirect_target"])
 
 
-def check_urls(url_config_chunk: List[UrlConfig], nu_validator_url: str) -> List[str]:
+def check_urls(url_config_chunk: List[UrlConfig], nu_validator_url: str, expected_lang: str = 'de') -> List[str]:
     errors = []
     for url_config in url_config_chunk:
-        errors += check_url(url_config, nu_validator_url)
+        errors += check_url(url_config, nu_validator_url, expected_lang)
     return errors
 
 
-def check_url(url_config: UrlConfig, nu_validator_url: str) -> List[str]:
+def check_url(url_config: UrlConfig, nu_validator_url: str, expected_lang: str = 'de') -> List[str]:
     url = url_config.full_url
     expected_status_code = url_config.expected_status_code
     expected_redirect_target = url_config.expected_redirect_target
@@ -94,7 +95,7 @@ def check_url(url_config: UrlConfig, nu_validator_url: str) -> List[str]:
             errors = []
             errors += check_include_error(response.text, url)
             soup = BeautifulSoup(response.text, 'html.parser')
-            errors += check_lang_definition(soup, url)
+            errors += check_lang_definition(soup, url, expected_lang)
             errors += check_canonical_link(soup, url)
             errors += check_metadata(soup, url)
             if nu_validator_url:
@@ -140,10 +141,10 @@ def check_canonical_link(soup: BeautifulSoup, request_url) -> List[str]:
     return []
 
 
-def check_lang_definition(soup: BeautifulSoup, url: str):
+def check_lang_definition(soup: BeautifulSoup, url: str, expected_lang: str = 'de'):
     html_tag = soup.find('html')
-    if html_tag is None or html_tag.attrs.get('lang') != 'de':
-        return [f"URL {url} doesn't contain language 'de' in html tag."]
+    if html_tag is None or html_tag.attrs.get('lang') != expected_lang:
+        return [f"URL {url} doesn't contain language '{expected_lang}' in html tag."]
     return []
 
 

@@ -115,6 +115,16 @@ class TestCheckLangDefinition:
 
         assert errors == [f"URL {URL} doesn't contain language 'de' in html tag."]
 
+    @pytest.mark.parametrize("lang", ["en-US", "de-DE"])
+    def test_configured_lang_is_fine(self, checker, lang):
+        assert checker.check_lang_definition(soup_of(html_page(lang=lang)), URL, lang) == []
+
+    @pytest.mark.parametrize("lang", ["en", "en-us", "de", None])
+    def test_configured_lang_must_match_exactly(self, checker, lang):
+        errors = checker.check_lang_definition(soup_of(html_page(lang=lang)), URL, "en-US")
+
+        assert errors == [f"URL {URL} doesn't contain language 'en-US' in html tag."]
+
 
 class TestCheckMetadata:
     def test_title_is_fine(self, checker):
@@ -415,6 +425,28 @@ class TestCli:
         assert result.exit_code == 1
         assert "==== !! 1 ERROR(S) OCCURRED !! =====" in result.output
         assert f"URL {URL} has 1 validation errors." in result.output
+
+    @responses.activate
+    def test_lang_option_sets_expected_language(self, checker, tmp_path):
+        english_url = "https://www.domain.com/path/"
+        responses.get(URL, body=html_page(lang="en-US"))
+        responses.get(english_url, body=html_page(lang="de", canonical=english_url))
+        csv_file = write_csv(tmp_path, f"{self.CSV_HEADER}{URL},200\n{english_url},200\n")
+
+        result = CliRunner().invoke(checker.check, ["--csv_file", csv_file, "--lang", "en-US"])
+
+        assert result.exit_code == 1
+        assert "==== !! 1 ERROR(S) OCCURRED !! =====" in result.output
+        assert f"URL {english_url} doesn't contain language 'en-US' in html tag." in result.output
+
+    @responses.activate
+    def test_lang_defaults_to_de(self, checker, tmp_path):
+        responses.get(URL, body=html_page(lang="de"))
+        csv_file = write_csv(tmp_path, f"{self.CSV_HEADER}{URL},200\n")
+
+        result = CliRunner().invoke(checker.check, ["--csv_file", csv_file])
+
+        assert result.exit_code == 0
 
     def test_csv_file_is_required(self, checker):
         result = CliRunner().invoke(checker.check, [])
